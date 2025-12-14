@@ -1,0 +1,193 @@
+:root {
+    --bg: #100060;
+    --ink: rgb(230, 230, 230);
+    --pink: #EA56FA;
+    --orange: #FEA23A;
+    --yellow: #F0E242;
+    --green: #56FAA0;
+}
+
+* {
+    box-sizing: border-box;
+}
+
+body {
+    margin: 0;
+    padding: 24px;
+    overflow: hidden;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: FaktMono, system-ui, monospace;
+    font-weight: 200;
+    font-size: 14px;
+    line-height: 19px;
+}
+
+#page {
+    width: 100%;
+    height: calc(100vh - 48px);
+    display: grid;
+    grid-template-columns: repeat(24, 1fr);
+    grid-template-rows: 24px 1fr 96px;
+    column-gap: 8px;
+    row-gap: 16px;
+}
+
+/* header */
+.title {
+    grid-column: 1 / span 8;
+    grid-row: 1;
+    margin-top: 8px;
+    display: flex;
+    align-items: left;
+    width: max-content;
+    z-index: 2;
+    background-color: #100060;
+}
+
+.description {
+    grid-column: 1 / span 4;
+    grid-row: 2;
+    padding-top: 4px;
+    overflow: visible;
+    font-size: inherit;
+    font-weight: 200;
+    max-width: 36ch;
+    z-index: 2;
+}
+
+.longitude-label {
+    top: 90px;
+    position: absolute;
+    grid-row: 1;
+    left: 50%;
+    background-color: #100060;
+    transform: translateX(calc(-50% - 32px)) rotate(90deg);
+    z-index: 10;
+}
+
+/* map area */
+.maps-grid {
+    display: grid;
+    grid-column: 1 / span 24;
+    grid-row: 1 / span 3;
+    position: relative;
+    height: 100%;
+    z-index: 1;
+    cursor: url('images/cursor-cross.png') 32 32, crosshair; 
+}
+
+.maps-grid svg {
+    display: block;
+    float: left;
+}
+
+/* panels */
+.panel {
+    position: absolute;
+    left: 0;
+    top: 0;
+    overflow: visible;
+    mix-blend-mode: multiply"
+}
+
+/* latitude label */
+.latitude-label {
+    position: absolute;
+    right: 0;
+    top: 50%;
+    background-color: #100060;
+    transform: translateY(calc(-50% - 32px));
+    z-index: 10;
+}
+
+
+/* exact spans for 4 equal columns */
+.mercator {
+    grid-column: 1 / span 6;
+    stroke: var(--pink);
+}
+
+.peters {
+    grid-column: 1 / span 6;
+    stroke: var(--orange);
+}
+
+.albers {
+    grid-column: 3 / span 6;
+    stroke: var(--yellow);
+}
+
+.winkel {
+    grid-column: 4 / span 6;
+    stroke: var(--green);
+}
+
+.brazil-outline {
+    opacity: 0.4;
+}
+
+/* footer */
+.footer {
+    grid-row: 3;
+    grid-column: 1 / span 24;
+    display: grid;
+    grid-template-columns: repeat(24, 1fr);
+    column-gap: 8px;
+    padding-bottom: 4px;
+    align-content: end;
+    align-items: start; 
+    z-index: 2;
+}
+
+.footer-col {
+    /* line-height: 20px;
+    font-weight: 300; */
+    background-color: #100060;
+}
+
+.footer-text {
+    grid-column: 1 / span 4;
+    overflow: visible;
+    font-size: inherit;
+    font-weight: 200;
+    max-width: 36ch;
+    background-color: #100060;
+}
+
+.footer-col.mercator-text {
+    grid-column: 13 / span 3;
+    color: var(--pink);
+}
+
+.footer-col.peters-text {
+    grid-column: 16 / span 3;
+    color: var(--orange);
+}
+
+.footer-col.albers-text {
+    grid-column: 19 / span 3;
+    color: var(--yellow);
+}
+
+.footer-col.winkel-text {
+    grid-column: 22 / span 3;
+    color: var(--green);
+}
+
+.footer-col .projection-name {
+    font-weight: 600;
+    display: block;
+    margin-bottom: 19px;
+    width: max-content;
+}
+
+.footer-col .distortion {
+    display: block;
+    margin-bottom: 8px;
+}
+
+.footer-col .description {
+    display: block;
+    line-height: 1.4;
+}

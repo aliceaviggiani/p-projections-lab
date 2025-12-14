@@ -1,0 +1,33 @@
+
+@font-face {
+  font-family: FaktMono;
+  src: url('./fonts/FaktMono-Blond.woff2') format("woff2");
+  font-weight: 300;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: FaktMono;
+  src: url('./fonts/FaktMono-Normal.woff2') format("woff2");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: FaktMono;
+  src: url('./fonts/FaktMonoTT-Medium_WM.woff2') format("woff2");
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: FaktMono;
+  src: url('./fonts/FaktMonoTT-SemiBold_WM.woff2') format("woff2");
+  font-weight: 600;
+  font-style: normal;
+  font-display: swap;
+}
+

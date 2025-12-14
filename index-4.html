@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <title>Map projections lab</title>
+    <link rel="stylesheet" href="style-4.css" />
+    <link rel="stylesheet" href="style-fonts.css" />
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <script src="https://unpkg.com/d3-geo-projection@4"></script>
+    <script src="https://unpkg.com/d3-geo-polygon@1"></script>
+</head>
+
+<body>
+    <div id="page">
+
+        <!-- header -->
+        <div class="title">Map projections lab</div>
+        <!-- <div class="description">
+            Representing a spherical object into a bi-dimensional surface is not an easy task. So much so are hundreds of map projections that choose to prioritize or shape, distance, area.<br>
+            <br>
+            Grab and move the shapes to check their distortions across the projections.
+        </div> -->
+
+        <div class="longitude-label">
+            Longitude <span id="label-longitude">0.0°</span>
+        </div>
+
+        <!-- map area -->
+        <div class="maps-grid">
+            <div class="latitude-label">
+                Latitude <span id="label-latitude">0.0°</span>
+            </div>
+            <div class="panel mercator" id="vis-mercator"></div>
+            <div class="panel peters" id="vis-peters"></div>
+            <div class="panel albers" id="vis-albers"></div>
+            <div class="panel winkel" id="vis-winkel"></div>
+        </div>
+
+        <!-- footer -->
+        <div class="footer">
+            <div class="footer-text">
+                Representing a spherical object on a two-dimensional surface is not an easy task. So much so that there are hundreds of map projections, each choosing to prioritize different properties, as shape, distance, or area.<br>
+                <br>
+                Drag and move the Brazil shape to observe their distortions across the projections.
+            </div> 
+
+            <div class="footer-col mercator-text">
+                <span class="projection-name">Mercator</span>
+                <!-- <span class="distortion">Distortion area ratio: x3.5</span> -->
+                <span class="description">Cylindrical projection. Preserves shapes and angles, and severely distorts areas, especially near the poles.</span>
+            </div>
+
+            <div class="footer-col peters-text">
+                <span class="projection-name">Gall-Peters</span>
+                <!-- <span class="distortion">Distortion area ratio: x3.5</span> -->
+                <span class="description">Cylindrical projection. Equal-area map projection, preserves accurate area ratios but distorts shapes.</span>
+            </div>
+
+            <div class="footer-col albers-text">
+                <span class="projection-name">Albers</span>
+                <!-- <span class="distortion">Distortion area ratio: x3.5</span> -->
+                <span class="description">Conic projection. Balances distortions of area, direction, and distance. Optimized for mid-latitude regions.</span>
+            </div>
+
+            <div class="footer-col winkel-text">
+                <span class="projection-name">Winkel Tripel</span>
+                <!-- <span class="distortion">Distortion area ratio: x3.5</span> -->
+                <span class="description">Compromise projection. Minimizes overall distortion across shape, area, and distance.</span>
+            </div>
+        </div>
+
+    </div>
+    <script src="script-5.js"></script>
+</body>
+
+</html>
