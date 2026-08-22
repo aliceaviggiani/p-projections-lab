@@ -4,8 +4,6 @@ An interactive data visualization exploring how map projections distort the shap
 
 **[→ View the live demo](https://aliceaviggiani.github.io/p-projections-lab/)**
 
-![Map projections lab preview](images/preview.png)
-
 ## Overview
 
 What starts as a trivial geometrical issue — representing a spherical object on a two-dimensional surface — reveals a more conceptual and political statement. This project addresses the fundamental representation challenge in cartography, while also providing a tool for questioning historical mapping conventions and how a geometrical decision can imply an international imbalance.
