@@ -5,6 +5,7 @@
     --orange: #FEA23A;
     --yellow: #F0E242;
     --green: #56FAA0;
+    --blue: #56C4FA;
 }
 
 * {
@@ -21,11 +22,22 @@ body {
     font-weight: 200;
     font-size: 14px;
     line-height: 19px;
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    user-select: none;
+}
+
+/* form fields are the one place typed/selected text is actually useful */
+#country-search-input {
+    -webkit-user-select: text;
+    -moz-user-select: text;
+    user-select: text;
 }
 
 #page {
     width: 100%;
     height: calc(100vh - 48px);
+    position: relative; /* anchors position:absolute children (the coordinate tags) to #page itself, not the viewport */
     display: grid;
     grid-template-columns: repeat(24, 1fr);
     grid-template-rows: 24px 1fr 96px;
@@ -56,14 +68,365 @@ body {
     z-index: 2;
 }
 
-.longitude-label {
-    top: 90px;
+/* always-visible per-shape coordinates: each shape gets a small floating tag that slides
+   along an edge to track its current position — longitude along the top, latitude down
+   the right. This is the same idea the original single-shape labels used (position tied
+   to the drag), just extended to every shape shown at once instead of one static readout.
+   top matches the title's own margin-top (8px) so they share a baseline. */
+.lon-overlay {
     position: absolute;
-    grid-row: 1;
-    left: 50%;
-    background-color: #100060;
-    transform: translateX(calc(-50% - 32px)) rotate(90deg);
+    top: 8px;
+    left: 24px;
+    right: 24px;
+    height: 20px;
     z-index: 10;
+    pointer-events: none; /* the strip itself is a no-op; tags re-enable pointer-events */
+}
+
+.lon-tag {
+    position: absolute;
+    top: 0;
+    transform: translateX(-50%);
+    white-space: nowrap;
+    pointer-events: auto;
+}
+
+.lon-tag-inner {
+    display: flex;
+    align-items: flex-start;
+    gap: 4px;
+    background-color: #100060;
+    transform: rotate(90deg);
+    transform-origin: top left;
+}
+
+.lat-overlay {
+    position: absolute;
+    top: 56px;
+    bottom: 120px;
+    right: 0;
+    z-index: 10;
+    pointer-events: none;
+}
+
+.lat-tag {
+    position: absolute;
+    right: 0;
+    transform: translateY(-50%);
+    background-color: #100060;
+    white-space: nowrap;
+    pointer-events: auto;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+/* every control now lives in one stack on the left, below the title */
+.left-controls {
+    grid-column: 1 / span 8;
+    grid-row: 2;
+    align-self: start;
+    align-items: flex-start; /* stops its own children (the two control groups) from stretching wide */
+    z-index: 2;
+    display: flex;
+    flex-direction: column;
+    gap: 21px;
+}
+
+/* each projection's own show/hide toggle — now the first group in the menu, so it carries
+   the title-to-menu gap (twice the page padding, 24px) that used to sit on add-shape-controls */
+.projection-controls {
+    align-items: flex-start;
+    z-index: 2;
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+    margin-top: 35px;
+}
+
+/* each row: a colored toggle dot + colored name, with the description tucked away until
+   hovered. position:relative anchors the description's absolute placement to this row. */
+.projection-row {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    cursor: pointer;
+    white-space: nowrap;
+}
+
+.projection-row:hover {
+    font-weight: 600;
+}
+
+/* the toggle dot borrows the row's own text color instead of the neutral --ink used
+   elsewhere, via currentColor — inputs don't inherit color by default, so set it explicitly */
+.projection-row input[type="checkbox"] {
+    color: inherit;
+    border-color: currentColor;
+}
+
+.projection-row input[type="checkbox"]:checked {
+    background: currentColor;
+}
+
+.robinson-row {
+    color: var(--pink);
+}
+
+.mercator-row {
+    color: var(--orange);
+}
+
+.peters-row {
+    color: var(--yellow);
+}
+
+.albers-row {
+    color: var(--green);
+}
+
+.winkel-row {
+    color: var(--blue);
+}
+
+/* hidden until the row is hovered; positioned as its own column to the right so it never
+   shifts the rows below it. Stays at normal weight even while the row's name goes bold. */
+.projection-desc {
+    display: none;
+    position: absolute;
+    top: 0;
+    left: 150px;
+    width: 185px;
+    white-space: normal;
+    font-weight: 200;
+    line-height: 19px;
+    pointer-events: none;
+}
+
+.projection-row:hover .projection-desc {
+    display: block;
+}
+
+/* three ways to add a shape: type a country, or pick a continent / geometric shape */
+.add-shape-controls {
+    align-items: flex-start; /* without this, flex stretches every row to the sidebar's full width */
+    z-index: 2;
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+}
+
+/* every "add a..." row shares this: an icon, then the control, all one consistent color */
+.add-shape-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    cursor: pointer;
+    white-space: nowrap;
+}
+
+.add-shape-icon {
+    display: inline-block;
+    width: 1ch;
+    text-align: center;
+    color: var(--ink);
+}
+
+/* continent/shape open as a plain list instead of the browser's own dropdown chrome. It's an
+   overlay (position:absolute) rather than pushing the rows below it down, so the opaque,
+   page-colored background is what keeps it readable over whatever it's covering. */
+.dropdown {
+    position: relative;
+}
+
+.dropdown-toggle.open {
+    font-weight: 600;
+}
+
+.dropdown-list {
+    position: absolute;
+    top: 100%;
+    left: calc(1ch + 6px); /* aligned with the toggle's own label, not its icon */
+    z-index: 5;
+    background-color: #100060;
+    gap: 1px;
+}
+
+.dropdown-list:not([hidden]) {
+    display: flex;
+    flex-direction: column;
+}
+
+.dropdown-option {
+    cursor: pointer;
+    white-space: nowrap;
+}
+
+.dropdown-option:hover {
+    opacity: 0.75;
+}
+
+#country-search-input {
+    width: auto;
+    background: transparent;
+    color: var(--ink);
+    font: inherit;
+    border: none;
+    padding: 0;
+    cursor: pointer;
+}
+
+/* a <select> sizes itself to its own selected option, but a text <input> doesn't shrink to
+   its placeholder — it defaults to the browser's ~20-character width, which stretched the
+   clickable/typing area well past the visible "add country" text. Match it to the label. */
+#country-search-input {
+    width: 11ch;
+}
+
+#country-search-input:focus {
+    outline: none;
+}
+
+/* grows while actively typing so longer country names stay readable — back to the tight
+   11ch width the rest of the time, which is what keeps the row's clickable area compact */
+#country-search-input:focus {
+    width: 22ch;
+}
+
+#country-search-input::placeholder {
+    color: var(--ink);
+    opacity: 1;
+}
+
+/* Chrome shows a native dropdown arrow on hover/focus for an input with a datalist —
+   it's not colorable, so it looks inconsistent next to the custom ⌄ icon. This hides it. */
+#country-search-input::-webkit-calendar-picker-indicator {
+    display: none !important;
+}
+
+/* snaps every shape back to its real position — its own group, styled like the
+   add-shape rows above (icon + label), not a bordered button */
+.reset-controls {
+    z-index: 2;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    background-color: #100060;
+}
+
+.reset-item {
+    background: transparent;
+    color: inherit;
+    font: inherit;
+    border: none;
+    padding: 0;
+    text-align: left;
+}
+
+.reset-item:hover {
+    opacity: 0.75;
+}
+
+/* limits/grid/land toggles — independent of any shape */
+.global-controls {
+    z-index: 2;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 1px;
+    background-color: #100060;
+}
+
+.global-controls label {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    cursor: pointer;
+}
+
+.shape-name {
+    min-width: 6ch;
+}
+
+.coord-input {
+    width: 7ch;
+    background: transparent;
+    border: none;
+    color: inherit;
+    font: inherit;
+    line-height: 1;
+    padding: 0 2px;
+}
+
+.coord-input:hover,
+.coord-input:focus {
+    border-bottom: 1px solid currentColor;
+}
+
+.coord-input:focus {
+    outline: none;
+    background: rgba(255, 255, 255, 0.12);
+}
+
+/* hide number input spinners so the field just reads as text until tapped */
+.coord-input::-webkit-inner-spin-button,
+.coord-input::-webkit-outer-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+
+/* custom checkboxes: a plain 14px circle, empty when unchecked, filled when checked —
+   used by the Limits/Grid/Land toggles and each projection's show/hide box */
+input[type="checkbox"] {
+    appearance: none;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    width: 14px;
+    height: 14px;
+    margin: 0;
+    border: 1px solid var(--ink);
+    border-radius: 50%;
+    background: transparent;
+    cursor: pointer;
+    flex-shrink: 0;
+}
+
+input[type="checkbox"]:checked {
+    background: var(--ink);
+}
+
+/* the × that removes a shape entirely */
+.shape-remove {
+    background: transparent;
+    color: inherit;
+    font: inherit;
+    border: none;
+    cursor: pointer;
+    padding: 0 2px;
+    line-height: 1;
+}
+
+.shape-remove:hover {
+    opacity: 0.6;
+}
+
+/* each projection's own boundary ("limits") and a 10° reference grid ("globe") — both
+   inherit their panel's stroke color, toggled independently from the controls above */
+.globe-outline {
+    opacity: 0.6;
+    pointer-events: none;
+}
+
+.globe-grid {
+    opacity: 0.15;
+    pointer-events: none;
+}
+
+/* every continent's real landmass at once — a static reference backdrop, not a shape */
+.globe-land {
+    opacity: 0.35;
+    pointer-events: none;
 }
 
 /* map area */
@@ -91,40 +454,54 @@ body {
     mix-blend-mode: multiply"
 }
 
-/* latitude label */
-.latitude-label {
-    position: absolute;
-    right: 0;
-    top: 50%;
-    background-color: #100060;
-    transform: translateY(calc(-50% - 32px));
-    z-index: 10;
-}
 
-
-/* exact spans for 4 equal columns */
+/* exact spans for 5 equal columns */
 .mercator {
-    grid-column: 1 / span 6;
-    stroke: var(--pink);
-}
-
-.peters {
     grid-column: 1 / span 6;
     stroke: var(--orange);
 }
 
+.peters {
+    grid-column: 1 / span 6;
+    stroke: var(--yellow);
+}
+
 .albers {
     grid-column: 3 / span 6;
-    stroke: var(--yellow);
+    stroke: var(--green);
 }
 
 .winkel {
     grid-column: 4 / span 6;
-    stroke: var(--green);
+    stroke: var(--blue);
 }
 
-.brazil-outline {
-    opacity: 0.4;
+.robinson {
+    grid-column: 5 / span 6;
+    stroke: var(--pink);
+}
+
+/* the visible line for each shape is just a picture — clicks pass through it */
+.shape-interactive {
+    pointer-events: none;
+}
+
+/* the invisible fat stroke on top is the actual drag target */
+.shape-hit {
+    pointer-events: stroke;
+}
+
+/* cursor feedback is driven by JS (setup_shape_dragging), not native :hover/:active — with
+   panels overlapping, :hover only ever reflects whichever one is topmost at that exact pixel,
+   not whichever shape is actually closest and about to be grabbed. Applied to #page, not just
+   .maps-grid, since a drag can start on top of a menu label where a panel peeks through. */
+#page.can-grab {
+    cursor: grab;
+}
+
+#page.is-dragging,
+#page.is-dragging * {
+    cursor: grabbing !important;
 }
 
 /* footer */
@@ -140,12 +517,6 @@ body {
     z-index: 2;
 }
 
-.footer-col {
-    /* line-height: 20px;
-    font-weight: 300; */
-    background-color: #100060;
-}
-
 .footer-text {
     grid-column: 1 / span 4;
     overflow: visible;
@@ -153,41 +524,4 @@ body {
     font-weight: 200;
     max-width: 36ch;
     background-color: #100060;
-}
-
-.footer-col.mercator-text {
-    grid-column: 13 / span 3;
-    color: var(--pink);
-}
-
-.footer-col.peters-text {
-    grid-column: 16 / span 3;
-    color: var(--orange);
-}
-
-.footer-col.albers-text {
-    grid-column: 19 / span 3;
-    color: var(--yellow);
-}
-
-.footer-col.winkel-text {
-    grid-column: 22 / span 3;
-    color: var(--green);
-}
-
-.footer-col .projection-name {
-    font-weight: 600;
-    display: block;
-    margin-bottom: 19px;
-    width: max-content;
-}
-
-.footer-col .distortion {
-    display: block;
-    margin-bottom: 8px;
-}
-
-.footer-col .description {
-    display: block;
-    line-height: 1.4;
 }
