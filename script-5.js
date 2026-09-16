@@ -156,6 +156,17 @@ const shape_geo = {};
 // continent dropdown, and the two default shapes (Greenland, Africa)
 let world_countries = [];
 
+// tracks whichever dropdown (country/continent/shape) is currently open, if any — see
+// open_dropdown_portal below. Declared up here with the rest of the shared state rather than
+// down next to the dropdown code itself, so it's always initialized before anything could
+// possibly call into that code.
+let close_current_dropdown = null;
+
+// how far the dropdown portal's box extends outward (border + padding) from the row it's
+// anchored to — kept with the other shared constants for the same reason as above.
+const PORTAL_BORDER_AND_PAD_X = 9; // 1px border + 8px padding
+const PORTAL_BORDER_AND_PAD_TOP = 5; // 1px border + 4px padding
+
 
 // --- spherical geometry helpers -----------------------------------------
 // dragging works by rotating the whole sphere so a shape's centroid lands exactly on the
@@ -336,6 +347,7 @@ build_panels(); // panel frames don't depend on any shape data anymore, so this 
 setup_projection_controls();
 setup_global_controls();
 setup_shape_dragging();
+setup_footer_toggle();
 
 load_world_atlas.then(({ countries, land }) => {
     world_countries = countries;
@@ -344,7 +356,6 @@ load_world_atlas.then(({ countries, land }) => {
 
     if (land) draw_land_layer(land);
 
-    populate_country_datalist(countries);
     setup_country_search();
     setup_continent_picker();
     setup_geometric_shape_picker();
@@ -773,6 +784,26 @@ function setup_global_controls() {
 }
 
 
+// collapses the footer's intro text down to its first 3 lines (plus a "..." line) or back
+// to the full thing — independent of any shape/map data, so it's wired up right at startup
+function setup_footer_toggle() {
+    const toggle = document.getElementById("footer-toggle");
+    const ellipsis = document.getElementById("footer-ellipsis");
+    const footer_text = document.querySelector(".footer-text");
+    if (!toggle || !ellipsis || !footer_text) return;
+
+    const icon = toggle.querySelector(".add-shape-icon");
+
+    toggle.addEventListener("click", () => {
+        const collapsed = footer_text.classList.toggle("collapsed");
+        ellipsis.hidden = !collapsed;
+        toggle.setAttribute("aria-expanded", String(!collapsed));
+        toggle.title = collapsed ? "Expand" : "Collapse";
+        if (icon) icon.textContent = collapsed ? "↓" : "↑";
+    });
+}
+
+
 // build and insert a new shape's floating lon tag (top edge, rotated like the original
 // single-shape label) and lat+checkbox tag (right edge, upright)
 function add_shape_rows(key, label) {
@@ -819,104 +850,119 @@ function add_shape(key, label, geometry) {
 }
 
 
-// --- country search: type a name, get its shape added -----------------------------------
-
-function populate_country_datalist(countries) {
-    const datalist = document.getElementById("country-list");
-    if (!datalist) return;
-    countries
-        .map((f) => f.properties && f.properties.name)
-        .filter(Boolean)
-        .sort()
-        .forEach((name) => {
-            const opt = document.createElement("option");
-            opt.value = name;
-            datalist.appendChild(opt);
-        });
-}
-
-function setup_country_search() {
-    const input = document.getElementById("country-search-input");
-    if (!input) return;
-
-    input.addEventListener("change", () => {
-        const name = input.value.trim();
-        input.value = "";
-        if (!name) return;
-
-        const match = world_countries.find(
-            (f) => f.properties && f.properties.name.toLowerCase() === name.toLowerCase()
-        );
-        if (!match) {
-            console.warn(`No country found matching "${name}" — pick one from the list.`);
-            return;
-        }
-        add_shape(slugify(match.properties.name), match.properties.name, ensure_winding(match));
-    });
-}
-
-
-// --- custom dropdowns (continent, shape): a plain list styled like the rest of the menu
-// instead of the browser's own dropdown chrome. It's an overlay — opening one doesn't push
-// the rows below it down, it sits on top of them (an opaque, page-colored background is what
-// makes that read cleanly instead of the covered row's text showing through).
+// --- shared dropdown portal: one floating list used by every dropdown on the page (country,
+// continent, shape). Positioned in JS from the anchor's live coordinates rather than CSS, and
+// living directly under #page (see the HTML comment above #dropdown-portal) rather than
+// nested inside any menu group — that placement, not just its background-color, is what
+// actually keeps it from getting trapped beneath a sibling group's own stacking context.
 //
-// keeps at most one of these open at a time, closes on an outside click or Escape, and
-// flips the toggle row's icon (↓/↑) and weight (bold while open) to match.
-const open_dropdowns = [];
+// only one of these is ever open at a time: opening a new one closes whatever was open,
+// including resetting that dropdown's own toggle/icon state via its close_current callback
+// (close_current_dropdown itself is declared up with the rest of the shared state).
+//
+// row_left/row_top is the exact spot the box should visually extend from — the outward
+// padding/border offset (PORTAL_BORDER_AND_PAD_X/TOP, declared with the rest of the shared
+// state) is so callers can just pass that row's own position without accounting for the
+// box's border and padding themselves. header_text, if given (continent/shape only), becomes
+// a bold, non-indented first row duplicating the toggle's own "↑ label" line — the toggle
+// itself is hidden while open so it isn't drawn twice.
+function open_dropdown_portal(row_left, row_top, options, on_pick, on_close, header_text) {
+    const portal = document.getElementById("dropdown-portal");
+    const page = document.getElementById("page");
+    if (!portal || !page) return null;
 
-function setup_custom_dropdown(toggle_id, list_id, names, on_pick) {
-    const toggle = document.getElementById(toggle_id);
-    const list = document.getElementById(list_id);
-    if (!toggle || !list) return;
+    if (close_current_dropdown) close_current_dropdown();
 
-    const icon = toggle.querySelector(".add-shape-icon");
+    const page_rect = page.getBoundingClientRect();
+    portal.style.left = `${row_left - page_rect.left - PORTAL_BORDER_AND_PAD_X}px`;
+    portal.style.top = `${row_top - page_rect.top - PORTAL_BORDER_AND_PAD_TOP}px`;
 
-    names.forEach((name) => {
+    portal.innerHTML = "";
+
+    if (header_text) {
+        const header = document.createElement("div");
+        header.className = "dropdown-option dropdown-header";
+        header.textContent = header_text;
+        header.addEventListener("mousedown", (event) => {
+            event.preventDefault();
+            close_dropdown();
+        });
+        portal.appendChild(header);
+    }
+
+    options.forEach((name) => {
         const option = document.createElement("div");
         option.className = "dropdown-option";
         option.setAttribute("role", "option");
-        option.tabIndex = 0;
         option.textContent = name;
-        option.addEventListener("click", () => {
-            close();
+        // mousedown (not click) + preventDefault keeps focus on whatever opened this — matters
+        // for the country input, which would otherwise blur before the click registers
+        option.addEventListener("mousedown", (event) => {
+            event.preventDefault();
+            close_dropdown();
             on_pick(name);
         });
-        list.appendChild(option);
+        portal.appendChild(option);
     });
+    portal.hidden = false;
 
-    const is_open = () => !list.hidden;
+    function close_dropdown() {
+        portal.hidden = true;
+        portal.innerHTML = "";
+        close_current_dropdown = null;
+        if (on_close) on_close();
+    }
+    close_current_dropdown = close_dropdown;
+    return close_dropdown;
+}
+
+// a click-to-open dropdown (continent, shape): shows its full (short) list of names inside a
+// bordered box that also encloses the toggle row's own "↑ label" line (a duplicate rendered
+// inside the portal — the real toggle is hidden while open, see open()/close() below), and
+// flips the toggle's icon (↓/↑) and weight (bold while open) to match
+function setup_custom_dropdown(toggle_id, names, on_pick) {
+    const toggle = document.getElementById(toggle_id);
+    if (!toggle) return;
+    const icon = toggle.querySelector(".add-shape-icon");
+    let close = null;
 
     function open() {
-        open_dropdowns.forEach((close_other) => close_other());
-        list.hidden = false;
+        const toggle_rect = toggle.getBoundingClientRect();
+        if (icon) icon.textContent = "↑";
+        const header_text = toggle.textContent.replace(/\s+/g, " ").trim();
+
+        close = open_dropdown_portal(
+            toggle_rect.left,
+            toggle_rect.top,
+            names,
+            on_pick,
+            () => {
+                toggle.classList.remove("open");
+                toggle.setAttribute("aria-expanded", "false");
+                toggle.style.visibility = "";
+                if (icon) icon.textContent = "↓";
+                close = null;
+            },
+            header_text
+        );
         toggle.classList.add("open");
         toggle.setAttribute("aria-expanded", "true");
-        if (icon) icon.textContent = "↑";
+        toggle.style.visibility = "hidden"; // the portal's own header row replaces it visually
     }
 
-    function close() {
-        list.hidden = true;
-        toggle.classList.remove("open");
-        toggle.setAttribute("aria-expanded", "false");
-        if (icon) icon.textContent = "↓";
-    }
-
-    open_dropdowns.push(close);
-
-    toggle.addEventListener("click", () => (is_open() ? close() : open()));
+    toggle.addEventListener("click", () => (close ? close() : open()));
     toggle.addEventListener("keydown", (event) => {
         if (event.key === "Enter" || event.key === " ") {
             event.preventDefault();
-            is_open() ? close() : open();
+            close ? close() : open();
         }
     });
-
     document.addEventListener("click", (event) => {
-        if (is_open() && !toggle.contains(event.target) && !list.contains(event.target)) close();
+        const portal = document.getElementById("dropdown-portal");
+        if (close && !toggle.contains(event.target) && portal && !portal.contains(event.target)) close();
     });
     document.addEventListener("keydown", (event) => {
-        if (event.key === "Escape" && is_open()) close();
+        if (event.key === "Escape" && close) close();
     });
 }
 
@@ -924,7 +970,7 @@ function setup_custom_dropdown(toggle_id, list_id, names, on_pick) {
 // --- continent dropdown: pick a continent, get it added as one merged shape -------------
 
 function setup_continent_picker() {
-    setup_custom_dropdown("continent-toggle", "continent-list", Object.keys(continent_ids), (name) => {
+    setup_custom_dropdown("continent-toggle", Object.keys(continent_ids), (name) => {
         const key = slugify(name);
         if (shape_geo[key]) return; // already added
 
@@ -942,10 +988,74 @@ function setup_continent_picker() {
 // --- geometric shape dropdown: pick a shape, get a synthetic one added ------------------
 
 function setup_geometric_shape_picker() {
-    setup_custom_dropdown("shape-toggle", "shape-list", Object.keys(geometric_shapes), (name) => {
+    setup_custom_dropdown("shape-toggle", Object.keys(geometric_shapes), (name) => {
         // each pick gets its own instance, so the same shape can be added more than once
         const key = `${slugify(name)}-${Object.keys(shape_geo).filter((k) => k.startsWith(slugify(name))).length + 1}`;
         const geometry = ensure_winding(geometric_shapes[name]());
         add_shape(key, name, geometry);
+    });
+}
+
+
+// --- country search: type a name, get a narrowing list in the same shared dropdown --------
+
+function setup_country_search() {
+    const input = document.getElementById("country-search-input");
+    if (!input) return;
+    let close = null;
+
+    function pick(name) {
+        const match = world_countries.find((f) => f.properties && f.properties.name === name);
+        input.value = "";
+        if (close) close();
+        if (!match) return;
+        add_shape(slugify(match.properties.name), match.properties.name, ensure_winding(match));
+    }
+
+    function show_matches() {
+        const query = input.value.trim().toLowerCase();
+
+        const all_names = world_countries
+            .map((f) => f.properties && f.properties.name)
+            .filter(Boolean)
+            .sort();
+
+        // no query yet (just clicked/focused it) — show the full list rather than nothing,
+        // so this reads as an actual dropdown from the first click, same as continent/shape.
+        // The portal itself scrolls (max-height + overflow-y) rather than this being capped.
+        const matches = query ? all_names.filter((name) => name.toLowerCase().includes(query)) : all_names;
+
+        if (matches.length === 0) {
+            if (close) close();
+            return;
+        }
+
+        const anchor = input.previousElementSibling || input; // the row's icon, for a consistent left edge
+        const rect = anchor.getBoundingClientRect();
+        const bottom = input.getBoundingClientRect().bottom;
+        close = open_dropdown_portal(rect.left, bottom, matches, pick, () => {
+            close = null;
+        });
+    }
+
+    input.addEventListener("focus", show_matches);
+    input.addEventListener("input", show_matches);
+    input.addEventListener("keydown", (event) => {
+        if (event.key === "Enter") {
+            event.preventDefault();
+            const query = input.value.trim().toLowerCase();
+            if (!query) return;
+            const match =
+                world_countries.find((f) => f.properties && f.properties.name.toLowerCase() === query) ||
+                world_countries.find((f) => f.properties && f.properties.name.toLowerCase().startsWith(query));
+            if (match) pick(match.properties.name);
+            else console.warn(`No country found matching "${input.value}" — keep typing to narrow the list.`);
+        } else if (event.key === "Escape" && close) {
+            close();
+        }
+    });
+    document.addEventListener("click", (event) => {
+        const portal = document.getElementById("dropdown-portal");
+        if (close && event.target !== input && portal && !portal.contains(event.target)) close();
     });
 }

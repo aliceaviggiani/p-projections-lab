@@ -65,28 +65,21 @@
 
             <!-- three ways to add a shape: a specific country, a whole continent (merged), or a
                  generated geometric shape — every row shares the same icon + label pattern.
-                 Continent and shape open a custom list instead of the browser's own dropdown —
-                 country stays native since it's a search-as-you-type field over ~200 names,
-                 a different kind of control than a short fixed list. -->
+                 All three open the same shared dropdown-portal below instead of any browser
+                 dropdown chrome: country's list narrows as you type, continent/shape show
+                 their full (short) list on click. -->
             <div class="add-shape-controls">
                 <div class="add-shape-item">
                     <span class="add-shape-icon">↓</span>
-                    <input list="country-list" id="country-search-input" placeholder="add country" autocomplete="off" />
-                    <datalist id="country-list"></datalist>
+                    <input id="country-search-input" placeholder="add country" autocomplete="off" />
                 </div>
-                <div class="dropdown" id="continent-dropdown">
-                    <div class="add-shape-item dropdown-toggle" id="continent-toggle" role="button" tabindex="0" aria-haspopup="listbox" aria-expanded="false">
-                        <span class="add-shape-icon">↓</span>
-                        add continent
-                    </div>
-                    <div class="dropdown-list" id="continent-list" role="listbox" hidden></div>
+                <div class="add-shape-item dropdown-toggle" id="continent-toggle" role="button" tabindex="0" aria-haspopup="listbox" aria-expanded="false">
+                    <span class="add-shape-icon">↓</span>
+                    add continent
                 </div>
-                <div class="dropdown" id="shape-dropdown">
-                    <div class="add-shape-item dropdown-toggle" id="shape-toggle" role="button" tabindex="0" aria-haspopup="listbox" aria-expanded="false">
-                        <span class="add-shape-icon">↓</span>
-                        add shape
-                    </div>
-                    <div class="dropdown-list" id="shape-list" role="listbox" hidden></div>
+                <div class="add-shape-item dropdown-toggle" id="shape-toggle" role="button" tabindex="0" aria-haspopup="listbox" aria-expanded="false">
+                    <span class="add-shape-icon">↓</span>
+                    add shape
                 </div>
             </div>
 
@@ -99,6 +92,15 @@
             </div>
 
         </div>
+
+        <!-- shared by every dropdown (country/continent/shape): one floating list, appended
+             directly to #page instead of nested inside any menu group. That matters — a group
+             like .add-shape-controls sets its own z-index, which quietly traps anything nested
+             inside it below sibling groups later in the DOM (like "actual position"), no matter
+             how high that nested element's own z-index is set. Sitting here instead means this
+             list's z-index is compared directly against the whole page, not trapped in a
+             corner of it, so its opaque background reliably hides whatever it's covering. -->
+        <div id="dropdown-portal" role="listbox" hidden></div>
 
         <!-- always-visible per-shape coordinates: floating tags that slide along the top edge
              (longitude) and right edge (latitude) to track each shape's current position —
@@ -119,9 +121,12 @@
         <!-- footer -->
         <div class="footer">
             <div class="footer-text">
-                Representing a spherical object on a two-dimensional surface is not an easy task. So much so that there are hundreds of map projections, each choosing to prioritize different properties, as shape, distance, or area.<br>
+                <button type="button" class="footer-toggle" id="footer-toggle" aria-expanded="true" title="Collapse">
+                    <span class="add-shape-icon">↑</span>
+                </button>
+                <span id="footer-text-body">Representing a spherical object on a two-dimensional surface is not an easy task. So much so that there are hundreds of map projections, each choosing to prioritize different properties, as shape, distance, or area.<br>
                 <br>
-                Drag and move any shape to observe its distortions across the projections. Starts with Greenland and Africa — add more with the controls above: a specific country, a whole continent, or a plain geometric shape (square, triangle, circle) to see how the globe itself warps them.
+                Drag and move any shape to observe its distortions across the projections. Starts with Greenland and Africa — add more with the controls above: a specific country, a whole continent, or a plain geometric shape (square, triangle, circle) to see how the globe itself warps them.</span><span id="footer-ellipsis" hidden>...</span>
             </div> 
         </div>
 

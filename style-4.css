@@ -233,38 +233,50 @@ body {
     color: var(--ink);
 }
 
-/* continent/shape open as a plain list instead of the browser's own dropdown chrome. It's an
-   overlay (position:absolute) rather than pushing the rows below it down, so the opaque,
-   page-colored background is what keeps it readable over whatever it's covering. */
-.dropdown {
-    position: relative;
+/* one shared floating list for every dropdown (country/continent/shape). Positioned in JS
+   from the anchor's live coordinates, and living directly under #page rather than nested in
+   any menu group — see the HTML comment above #dropdown-portal for why that placement is
+   what actually fixes the masking, not just the background-color/border below. The border
+   is the "safer" version of that masking: even if the background ever fell short again, the
+   outline still makes the box's true extent obvious rather than silently bleeding. */
+#dropdown-portal {
+    position: absolute;
+    z-index: 50;
+    background-color: #100060;
+    border: 1px solid var(--ink);
+    padding: 4px 16px 8px 8px;
+    min-width: 200px; /* wide enough to fully cover the longest row it might sit over (e.g. "actual position") */
+    max-height: 320px; /* long lists (all ~200 countries) scroll inside this instead of overflowing the page */
+    overflow-y: auto;
+    gap: 1px;
+}
+
+#dropdown-portal:not([hidden]) {
+    display: flex;
+    flex-direction: column;
 }
 
 .dropdown-toggle.open {
     font-weight: 600;
 }
 
-.dropdown-list {
-    position: absolute;
-    top: 100%;
-    left: calc(1ch + 6px); /* aligned with the toggle's own label, not its icon */
-    z-index: 5;
-    background-color: #100060;
-    gap: 1px;
-}
-
-.dropdown-list:not([hidden]) {
-    display: flex;
-    flex-direction: column;
-}
-
 .dropdown-option {
     cursor: pointer;
     white-space: nowrap;
+    padding-left: calc(1ch + 6px); /* lines up with the icon rows' own label position */
 }
 
 .dropdown-option:hover {
     opacity: 0.75;
+}
+
+/* continent/shape only: the toggle's own "↑ label" line, duplicated inside the bordered box
+   (the real toggle is hidden while open) — flush with the box's edge, not indented like the
+   options below it, since it keeps its own icon rather than sharing the options' left inset */
+.dropdown-header {
+    font-weight: 600;
+    padding-left: 0;
+    margin-bottom: 20px; /* same group-gap convention used elsewhere (40px total vs 20px within a group) */
 }
 
 #country-search-input {
@@ -494,14 +506,20 @@ input[type="checkbox"]:checked {
 /* cursor feedback is driven by JS (setup_shape_dragging), not native :hover/:active — with
    panels overlapping, :hover only ever reflects whichever one is topmost at that exact pixel,
    not whichever shape is actually closest and about to be grabbed. Applied to #page, not just
-   .maps-grid, since a drag can start on top of a menu label where a panel peeks through. */
-#page.can-grab {
-    cursor: grab;
+   .maps-grid, since a drag can start on top of a menu label where a panel peeks through.
+   !important + the descendant selector are required here: .maps-grid sets its own explicit
+   cursor (the crosshair image), and a child's own explicit cursor always beats a value
+   merely inherited from an ancestor like #page — without overriding it directly, "can-grab"
+   was silently doing nothing everywhere the crosshair was set, which was the entire map area. */
+#page.can-grab,
+#page.can-grab .maps-grid,
+#page.can-grab .maps-grid * {
+    cursor: url('images/cursor-hand.png') 20 20, grab !important;
 }
 
 #page.is-dragging,
 #page.is-dragging * {
-    cursor: grabbing !important;
+    cursor: url('images/cursor-hand-grabbing.png') 20 20, grabbing !important;
 }
 
 /* footer */
@@ -519,9 +537,34 @@ input[type="checkbox"]:checked {
 
 .footer-text {
     grid-column: 1 / span 4;
+    position: relative;
+    padding-left: calc(1ch + 6px); /* room for the toggle icon, hanging to the left of the text */
     overflow: visible;
     font-size: inherit;
     font-weight: 200;
     max-width: 36ch;
     background-color: #100060;
+}
+
+.footer-toggle {
+    position: absolute;
+    left: 0;
+    top: 0;
+    background: transparent;
+    border: none;
+    padding: 0;
+    color: inherit;
+    font: inherit;
+    line-height: inherit;
+    cursor: pointer;
+}
+
+#footer-text-body {
+    display: block;
+}
+
+/* collapsed: clip to 3 lines (3 × 19px line-height) and show the "..." line below instead */
+.footer-text.collapsed #footer-text-body {
+    max-height: 57px;
+    overflow: hidden;
 }
