@@ -277,8 +277,16 @@ function reverse_ring_coords(coords) {
 
 // dissolve a list of GeoJSON features (that share borders) into one shape.
 // tries turf's batch union first (turf 7), falls back to pairwise union (turf 6-style API)
+//
+// A feature that straddles the antimeridian (Russia, Fiji) gets unwrapped first — see
+// straddles_antimeridian/unwrap_antimeridian below. Skipping that step is what caused the
+// stray sweeping-arc artifact across Asia (Russia's far-east sliver corrupting the merge the
+// same way Fiji's exclusion note further up already documented for Oceania) — but unlike
+// Fiji, Russia is too much of Asia to just leave out, so this fixes the merge instead.
 function union_all(features) {
-    const valid = features.filter((f) => f && f.geometry);
+    const valid = features
+        .filter((f) => f && f.geometry)
+        .map((f) => (straddles_antimeridian(f) ? unwrap_antimeridian(f) : f));
     if (valid.length === 0) return null;
     if (valid.length === 1) return ensure_winding(valid[0]);
 
@@ -300,6 +308,47 @@ function union_all(features) {
         }
     }
     return ensure_winding(acc);
+}
+
+// true only when a SINGLE feature's own geometry has points near both +180 and -180 — i.e.
+// it individually straddles the antimeridian (Russia, Fiji). This must be a per-feature
+// check, not a blanket "any longitude below X" rule: North America legitimately spans deep
+// into negative longitudes (Alaska, Canada) with no antimeridian involved at all, and a
+// blanket rule would wrongly mangle it.
+function straddles_antimeridian(feature) {
+    let has_near_positive = false;
+    let has_near_negative = false;
+    (function scan(coords) {
+        if (typeof coords[0][0] === "number") {
+            coords.forEach(([lon]) => {
+                if (lon > 170) has_near_positive = true;
+                if (lon < -170) has_near_negative = true;
+            });
+        } else {
+            coords.forEach(scan);
+        }
+    })(feature.geometry.coordinates);
+    return has_near_positive && has_near_negative;
+}
+
+// shifts a straddling feature's negative-longitude points by +360 so the whole feature
+// occupies one continuous numeric range instead of wrapping through ±180. Planar tools like
+// turf.union don't know about spherical wraparound — a piece near +179° and another near
+// -179° look 358 units apart to them, not the real ~2°, and unioning across that gap is what
+// produces the corrupted, spuriously-connected result. d3's projections are trig-based and
+// periodic, so downstream rendering and rotation are unaffected by longitudes past 180°.
+function unwrap_antimeridian(feature) {
+    function remap(coords) {
+        if (typeof coords[0][0] === "number") {
+            return coords.map(([lon, lat]) => [lon < 0 ? lon + 360 : lon, lat]);
+        }
+        return coords.map(remap);
+    }
+    return {
+        type: feature.type,
+        properties: feature.properties,
+        geometry: { type: feature.geometry.type, coordinates: remap(feature.geometry.coordinates) }
+    };
 }
 
 function slugify(name) {

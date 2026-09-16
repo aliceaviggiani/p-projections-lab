@@ -245,7 +245,7 @@ body {
     background-color: #100060;
     border: 1px solid var(--ink);
     padding: 4px 16px 8px 8px;
-    min-width: 200px; /* wide enough to fully cover the longest row it might sit over (e.g. "actual position") */
+    min-width: 200px; /* wide enough to fully cover the longest row it might sit over (e.g. "real position") */
     max-height: 320px; /* long lists (all ~200 countries) scroll inside this instead of overflowing the page */
     overflow-y: auto;
     gap: 1px;

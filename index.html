@@ -87,7 +87,7 @@
             <div class="reset-controls">
                 <button type="button" id="reset-positions-btn" class="add-shape-item reset-item">
                     <span class="add-shape-icon">⊕</span>
-                    actual position
+                    real position
                 </button>
             </div>
 
@@ -96,7 +96,7 @@
         <!-- shared by every dropdown (country/continent/shape): one floating list, appended
              directly to #page instead of nested inside any menu group. That matters — a group
              like .add-shape-controls sets its own z-index, which quietly traps anything nested
-             inside it below sibling groups later in the DOM (like "actual position"), no matter
+             inside it below sibling groups later in the DOM (like "real position"), no matter
              how high that nested element's own z-index is set. Sitting here instead means this
              list's z-index is compared directly against the whole page, not trapped in a
              corner of it, so its opaque background reliably hides whatever it's covering. -->
