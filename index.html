@@ -6,6 +6,7 @@
     <title>Map projections lab</title>
     <link rel="stylesheet" href="style-4.css" />
     <link rel="stylesheet" href="style-fonts.css" />
+    <link rel="icon" type="image/svg+xml" href="favicon.svg" />
     <script src="https://d3js.org/d3.v7.min.js"></script>
     <script src="https://unpkg.com/d3-geo-projection@4"></script>
     <script src="https://unpkg.com/d3-geo-polygon@1"></script>
@@ -27,30 +28,35 @@
                  footer. Colors match each panel's stroke; hover a name to preview its
                  description (used to live as always-visible footer text). -->
             <div class="projection-controls">
-                <label class="projection-row robinson-row">
-                    <input type="checkbox" class="projection-toggle" data-projection="robinson" checked autocomplete="off" />
-                    robinson
-                    <span class="projection-desc"><span class="projection-desc-text">Pseudocylindrical projection. A visual compromise between shape and area, long the standard choice for general-reference world maps.</span></span>
-                </label>
                 <label class="projection-row mercator-row">
                     <input type="checkbox" class="projection-toggle" data-projection="mercator" checked autocomplete="off" />
                     mercator
-                    <span class="projection-desc"><span class="projection-desc-text">Cylindrical projection. Preserves shapes and angles, and severely distorts areas, especially near the poles.</span></span>
-                </label>
-                <label class="projection-row peters-row">
-                    <input type="checkbox" class="projection-toggle" data-projection="peters" autocomplete="off" />
-                    gall-peters
-                    <span class="projection-desc"><span class="projection-desc-text">Cylindrical projection. Equal-area map projection, preserves accurate area ratios but distorts shapes.</span></span>
+                    <span class="projection-desc"><span class="projection-desc-text"><span class="projection-desc-bold">1569</span><br><span class="projection-desc-bold">Gerardus Mercator, Flanders</span><br>Devised for maritime navigation. Preserves angles and shapes but inflates area toward the poles.</span></span>
                 </label>
                 <label class="projection-row albers-row">
                     <input type="checkbox" class="projection-toggle" data-projection="albers" autocomplete="off" />
                     albers
-                    <span class="projection-desc"><span class="projection-desc-text">Conic projection. Balances distortions of area, direction, and distance. Optimized for mid-latitude regions.</span></span>
+                    <span class="projection-desc"><span class="projection-desc-text"><span class="projection-desc-bold">1805</span><br><span class="projection-desc-bold">Heinrich C. Albers, Germany</span><br>Conic projection built for accurate area within one mid-latitude band. Still the standard choice for regional maps like the continental US.</span></span>
                 </label>
-                <label class="projection-row winkel-row">
-                    <input type="checkbox" class="projection-toggle" data-projection="winkel" autocomplete="off" />
-                    winkel tripel
-                    <span class="projection-desc"><span class="projection-desc-text">Compromise projection. Minimizes overall distortion across shape, area, and distance.</span></span>
+                <label class="projection-row peters-row">
+                    <input type="checkbox" class="projection-toggle" data-projection="peters" autocomplete="off" />
+                    gall-peters
+                    <span class="projection-desc"><span class="projection-desc-text"><span class="projection-desc-bold">1855</span><br><span class="projection-desc-bold">James Gall, Scotland</span><br>Equal-area cylindrical projection, re-presented by German historian Arno Peters in 1973 as a fairness-driven alternative to Mercator.</span></span>
+                </label>
+                <label class="projection-row dymaxion-row">
+                    <input type="checkbox" class="projection-toggle" data-projection="dymaxion" autocomplete="off" />
+                    dymaxion
+                    <span class="projection-desc"><span class="projection-desc-text"><span class="projection-desc-bold">1943</span><br><span class="projection-desc-bold">Buckminster Fuller, US</span><br>Unfolds the globe onto an icosahedron, spreading distortion across fold seams instead of concentrating it at the poles.</span></span>
+                </label>
+                <label class="projection-row robinson-row">
+                    <input type="checkbox" class="projection-toggle" data-projection="robinson" autocomplete="off" />
+                    robinson
+                    <span class="projection-desc"><span class="projection-desc-text"><span class="projection-desc-bold">1963</span><br><span class="projection-desc-bold">Arthur H. Robinson, US</span><br>Compromise projection built to look right rather than measure right. Adopted by National Geographic from 1988 to 1998.</span></span>
+                </label>
+                <label class="projection-row un-row">
+                    <input type="checkbox" class="projection-toggle" data-projection="un" checked autocomplete="off" />
+                    equal earth
+                    <span class="projection-desc"><span class="projection-desc-text"><span class="projection-desc-bold">2018</span><br><span class="projection-desc-bold">Bojan Šavrič, Tom Patterson and Bernhard Jenny, Slovenia, US and Switzerland</span><br>The equal-area projection the UN endorsed in 2026 as a Mercator alternative, designed to look as natural as Robinson while keeping true relative size.</span></span>
                 </label>
             </div>
 
@@ -112,10 +118,11 @@
         <!-- map area -->
         <div class="maps-grid">
             <div class="panel mercator" id="vis-mercator"></div>
-            <div class="panel peters" id="vis-peters"></div>
             <div class="panel albers" id="vis-albers"></div>
-            <div class="panel winkel" id="vis-winkel"></div>
+            <div class="panel peters" id="vis-peters"></div>
+            <div class="panel dymaxion" id="vis-dymaxion"></div>
             <div class="panel robinson" id="vis-robinson"></div>
+            <div class="panel un" id="vis-un"></div>
         </div>
 
         <!-- footer -->
@@ -124,9 +131,9 @@
                 <button type="button" class="footer-toggle" id="footer-toggle" aria-expanded="true" title="Collapse">
                     <span class="add-shape-icon">↑</span>
                 </button>
-                <span id="footer-text-body">Representing a spherical object on a two-dimensional surface is not an easy task. So much so that there are hundreds of map projections, each choosing to prioritize different properties, as shape, distance, or area.<br>
+                <span id="footer-text-body">Mathematical choices are also political. Representing a spherical object on a two-dimensional surface is not an easy task. So much so that there are hundreds of map projections, each choosing to prioritize different properties, such as shape, distance, or area.<br>
                 <br>
-                Drag and move any shape to observe its distortions across the projections. Starts with Greenland and Africa — add more with the controls above: a specific country, a whole continent, or a plain geometric shape (square, triangle, circle) to see how the globe itself warps them.</span><span id="footer-ellipsis" hidden>...</span>
+                Drag and move any shape to observe its distortions across the projections. Start with Greenland and Africa, add more with the controls above: a specific country, a whole continent, or a plain geometric shape to see how the globe itself warps them.</span><span id="footer-ellipsis" hidden>...</span>
             </div> 
         </div>
 

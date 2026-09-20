@@ -6,6 +6,7 @@
     --yellow: #F0E242;
     --green: #56FAA0;
     --blue: #56C4FA;
+    --violet: #7C6FFA;
 }
 
 * {
@@ -171,24 +172,34 @@ body {
     background: currentColor;
 }
 
-.robinson-row {
+.mercator-row {
     color: var(--pink);
 }
 
-.mercator-row {
-    color: var(--orange);
+.albers-row {
+    color: var(--violet);
 }
 
 .peters-row {
-    color: var(--yellow);
+    color: var(--blue);
 }
 
-.albers-row {
+.dymaxion-row {
     color: var(--green);
 }
 
-.winkel-row {
-    color: var(--blue);
+.robinson-row {
+    color: var(--yellow);
+}
+
+.un-row {
+    color: var(--orange);
+}
+
+/* the year (line 1) and author+country (line 2) of a row's description — see
+   .projection-desc-text below for the rest of the three-line structure */
+.projection-desc-bold {
+    font-weight: 600;
 }
 
 /* hidden until the row is hovered; positioned as its own column to the right so it never
@@ -464,30 +475,39 @@ input[type="checkbox"]:checked {
 }
 
 
-/* exact spans for 5 equal columns */
+/* every panel's SVG is drawn at the full #vis-* container size (set in script-5.js) and
+   sits position:absolute at left:0/top:0 — see .panel above — so these grid-column spans
+   don't actually place or size anything on screen; the panels overlap edge-to-edge and are
+   told apart by stroke color + mix-blend-mode: multiply. Left in place only so each panel
+   still has some grid area assigned, and renumbered here to match the new 6-panel order. */
 .mercator {
     grid-column: 1 / span 6;
-    stroke: var(--orange);
-}
-
-.peters {
-    grid-column: 1 / span 6;
-    stroke: var(--yellow);
+    stroke: var(--pink);
 }
 
 .albers {
-    grid-column: 3 / span 6;
-    stroke: var(--green);
+    grid-column: 2 / span 6;
+    stroke: var(--violet);
 }
 
-.winkel {
-    grid-column: 4 / span 6;
+.peters {
+    grid-column: 3 / span 6;
     stroke: var(--blue);
+}
+
+.dymaxion {
+    grid-column: 4 / span 6;
+    stroke: var(--green);
 }
 
 .robinson {
     grid-column: 5 / span 6;
-    stroke: var(--pink);
+    stroke: var(--yellow);
+}
+
+.un {
+    grid-column: 6 / span 6;
+    stroke: var(--orange);
 }
 
 /* the visible line for each shape is just a picture — clicks pass through it */

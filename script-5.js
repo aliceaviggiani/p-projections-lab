@@ -94,22 +94,23 @@ const albers_fit_extent = {
     ]]
 };
 
-// loading projections. Albers keeps a narrow, mid-latitude fit on purpose — it's tuned for
-// that band, and showing it struggle outside it is the point — the other four are meant to
-// show the whole world, so they fit to `world_extent` instead.
+// Dymaxion (Airocean) unfolds the globe onto an icosahedron rather than a lat/lon rectangle,
+// so fitting it to the same ±85° world_extent as the four rectangular projections below would
+// just fit the net to an arbitrary lat/lon box instead of its own natural outline. It fits to
+// the whole sphere instead.
+const dymaxion_fit_extent = { type: "Sphere" };
+
+// loading projections, in chronological order: Mercator (1569), Albers (1805),
+// Gall-Peters (1855), Dymaxion (1943), Robinson (1963), and Equal Earth (2018, the
+// projection the UN endorsed over Mercator in 2026, key "un" below). Mercator, Gall-Peters,
+// Robinson and Equal Earth are the four whole-world rectangular projections, so they share
+// `world_extent`; Albers and Dymaxion each fit to their own extent instead (see the comments
+// above).
 const projections_setup = [
     {
         key: "mercator",
         selector: "#vis-mercator",
         create: () => d3.geoMercator(),
-        width: w,
-        scale_factor: 1.0,
-        fit: world_extent
-    },
-    {
-        key: "peters",
-        selector: "#vis-peters",
-        create: () => d3.geoCylindricalEqualArea().parallel(45), // standard 45 parallels
         width: w,
         scale_factor: 1.0,
         fit: world_extent
@@ -124,17 +125,38 @@ const projections_setup = [
         translate: [w / 2, h / 10]
     },
     {
-        key: "winkel",
-        selector: "#vis-winkel",
-        create: () => d3.geoWinkel3(),
+        key: "peters",
+        selector: "#vis-peters",
+        create: () => d3.geoCylindricalEqualArea().parallel(45), // standard 45 parallels
         width: w,
         scale_factor: 1.0,
         fit: world_extent
     },
     {
+        key: "dymaxion",
+        selector: "#vis-dymaxion",
+        // Fuller's Airocean/Dymaxion projection, from d3-geo-polygon (already loaded in
+        // index.html). Polyhedral, not rectangular — see dymaxion_fit_extent above.
+        create: () => d3.geoAirocean(),
+        width: w,
+        scale_factor: 1.0,
+        fit: dymaxion_fit_extent
+    },
+    {
         key: "robinson",
         selector: "#vis-robinson",
         create: () => d3.geoRobinson(),
+        width: w,
+        scale_factor: 1.0,
+        fit: world_extent
+    },
+    {
+        key: "un",
+        selector: "#vis-un",
+        // Equal Earth (Šavrič/Patterson/Jenny, 2018) — the equal-area projection the UN
+        // General Assembly's Sept. 2026 resolution promotes in place of Mercator. Distinct
+        // from Gall-Peters: same accurate area ratios, less shape distortion.
+        create: () => d3.geoEqualEarth(),
         width: w,
         scale_factor: 1.0,
         fit: world_extent
