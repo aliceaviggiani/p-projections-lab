@@ -30,27 +30,27 @@
                 <label class="projection-row robinson-row">
                     <input type="checkbox" class="projection-toggle" data-projection="robinson" checked autocomplete="off" />
                     robinson
-                    <span class="projection-desc">Pseudocylindrical projection. A visual compromise between shape and area, long the standard choice for general-reference world maps.</span>
+                    <span class="projection-desc"><span class="projection-desc-text">Pseudocylindrical projection. A visual compromise between shape and area, long the standard choice for general-reference world maps.</span></span>
                 </label>
                 <label class="projection-row mercator-row">
                     <input type="checkbox" class="projection-toggle" data-projection="mercator" checked autocomplete="off" />
                     mercator
-                    <span class="projection-desc">Cylindrical projection. Preserves shapes and angles, and severely distorts areas, especially near the poles.</span>
+                    <span class="projection-desc"><span class="projection-desc-text">Cylindrical projection. Preserves shapes and angles, and severely distorts areas, especially near the poles.</span></span>
                 </label>
                 <label class="projection-row peters-row">
                     <input type="checkbox" class="projection-toggle" data-projection="peters" autocomplete="off" />
                     gall-peters
-                    <span class="projection-desc">Cylindrical projection. Equal-area map projection, preserves accurate area ratios but distorts shapes.</span>
+                    <span class="projection-desc"><span class="projection-desc-text">Cylindrical projection. Equal-area map projection, preserves accurate area ratios but distorts shapes.</span></span>
                 </label>
                 <label class="projection-row albers-row">
                     <input type="checkbox" class="projection-toggle" data-projection="albers" autocomplete="off" />
                     albers
-                    <span class="projection-desc">Conic projection. Balances distortions of area, direction, and distance. Optimized for mid-latitude regions.</span>
+                    <span class="projection-desc"><span class="projection-desc-text">Conic projection. Balances distortions of area, direction, and distance. Optimized for mid-latitude regions.</span></span>
                 </label>
                 <label class="projection-row winkel-row">
                     <input type="checkbox" class="projection-toggle" data-projection="winkel" autocomplete="off" />
                     winkel tripel
-                    <span class="projection-desc">Compromise projection. Minimizes overall distortion across shape, area, and distance.</span>
+                    <span class="projection-desc"><span class="projection-desc-text">Compromise projection. Minimizes overall distortion across shape, area, and distance.</span></span>
                 </label>
             </div>
 
@@ -86,7 +86,7 @@
             <!-- snaps every shape back to its real, undragged position -->
             <div class="reset-controls">
                 <button type="button" id="reset-positions-btn" class="add-shape-item reset-item">
-                    <span class="add-shape-icon">⊕</span>
+                    <span class="add-shape-icon">+</span>
                     real position
                 </button>
             </div>

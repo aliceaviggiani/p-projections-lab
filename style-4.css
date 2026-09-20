@@ -87,12 +87,17 @@ body {
     position: absolute;
     top: 0;
     transform: translateX(-50%);
-    background-color: #100060;
     white-space: nowrap;
     pointer-events: auto;
+}
+
+.lon-tag-inner {
     display: flex;
-    align-items: center;
+    align-items: flex-start;
     gap: 4px;
+    background-color: #100060;
+    transform: rotate(90deg);
+    transform-origin: top left;
 }
 
 .lat-overlay {
@@ -148,6 +153,7 @@ body {
     gap: 4px;
     cursor: pointer;
     white-space: nowrap;
+    background-color: #100060;
 }
 
 .projection-row:hover {
@@ -203,6 +209,16 @@ body {
     display: block;
 }
 
+/* the actual background: a plain inline span, not absolutely positioned like its parent
+   above, so a multi-line description gets its background applied per line (hugging each
+   line's own text) instead of one rectangle spanning the whole block's width */
+.projection-desc-text {
+    background-color: #100060;
+    padding: 2px 0; /* closes the gap between lines — box-decoration-break below repeats it per line */
+    box-decoration-break: clone; /* repeats the (nonexistent) box edges per line rather than treating it as one split box */
+    -webkit-box-decoration-break: clone;
+}
+
 /* three ways to add a shape: type a country, or pick a continent / geometric shape */
 .add-shape-controls {
     align-items: flex-start; /* without this, flex stretches every row to the sidebar's full width */
@@ -212,13 +228,17 @@ body {
     gap: 1px;
 }
 
-/* every "add a..." row shares this: an icon, then the control, all one consistent color */
+/* every "add a..." row shares this: an icon, then the control, all one consistent color.
+   background-color is per-row (not on .add-shape-controls) so it hugs just that row's own
+   content instead of stretching to the group's widest row (e.g. "add continent") for every
+   row in it, including shorter ones like "add shape" */
 .add-shape-item {
     display: flex;
     align-items: center;
     gap: 6px;
     cursor: pointer;
     white-space: nowrap;
+    background-color: #100060;
 }
 
 .add-shape-icon {
@@ -284,21 +304,8 @@ body {
     cursor: pointer;
 }
 
-/* a <select> sizes itself to its own selected option, but a text <input> doesn't shrink to
-   its placeholder — it defaults to the browser's ~20-character width, which stretched the
-   clickable/typing area well past the visible "add country" text. Match it to the label. */
-#country-search-input {
-    width: 11ch;
-}
-
 #country-search-input:focus {
     outline: none;
-}
-
-/* grows while actively typing so longer country names stay readable — back to the tight
-   11ch width the rest of the time, which is what keeps the row's clickable area compact */
-#country-search-input:focus {
-    width: 22ch;
 }
 
 #country-search-input::placeholder {
@@ -352,12 +359,7 @@ body {
     cursor: pointer;
 }
 
-.shape-name {
-    min-width: 6ch;
-}
-
 .coord-input {
-    width: 7ch;
     background: transparent;
     border: none;
     color: inherit;

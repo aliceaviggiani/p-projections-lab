@@ -165,7 +165,13 @@ let close_current_dropdown = null;
 // how far the dropdown portal's box extends outward (border + padding) from the row it's
 // anchored to — kept with the other shared constants for the same reason as above.
 const PORTAL_BORDER_AND_PAD_X = 9; // 1px border + 8px padding
-const PORTAL_BORDER_AND_PAD_TOP = 5; // 1px border + 4px padding
+const PORTAL_BORDER_AND_PAD_TOP = 0; // the row above sits only 1px away, leaving no room to also pad above the header text
+
+// breathing room between a plain row (no header duplicated inside the box, like country's
+// input) and the box's top border — separate from PORTAL_BORDER_AND_PAD_TOP above, which
+// instead pulls the box UP to wrap around a header line. Without its own gap here, the box's
+// top border sat flush against — visually touching — the row right above it.
+const DROPDOWN_GAP_BELOW_ROW = 4;
 
 
 // --- spherical geometry helpers -----------------------------------------
@@ -681,6 +687,8 @@ function refresh_shape_row(key) {
 
     if (document.activeElement !== lat_input) lat_input.value = state.lat.toFixed(1);
     if (document.activeElement !== lon_input) lon_input.value = lon.toFixed(1);
+    size_coord_input(lat_input);
+    size_coord_input(lon_input);
 
     const lon_percent = ((lon + 180) / 360) * 100; // -180 -> left edge, 180 -> right edge
     lon_tag.style.left = `${Math.max(2, Math.min(98, lon_percent))}%`;
@@ -692,42 +700,51 @@ function refresh_shape_row(key) {
     deconflict_tags(".lat-overlay", ".lat-tag", "top");
 }
 
+// a fixed input width left a long stretch of background trailing past short values like
+// "0.0" — this sizes it to the value actually shown, plus a small margin, instead
+function size_coord_input(input) {
+    input.style.width = `${input.value.length + 1}ch`;
+}
+
 // when two or more tags land close enough together to overlap, push the later ones apart
 // along whichever axis they're actually laid out on — works in actual measured pixels rather
 // than crude percentage rounding, which missed collisions whenever 1% of the strip was
-// smaller than a tag. Each tag is centered on its natural position (translateX/Y(-50%)), so
-// half its own rendered size is how far it actually reaches from that center point; using
-// the real measured size (rather than a fixed guess) is what makes this work correctly for
-// longitude tags now that they're variable-width text like latitude's, not a fixed-width
-// rotated column.
+// smaller than a tag.
 function deconflict_tags(overlaySelector, tagSelector, positionProp) {
     const overlay = document.querySelector(overlaySelector);
     if (!overlay) return;
     const tags = Array.from(overlay.querySelectorAll(tagSelector));
     const margin_prop = positionProp === "left" ? "marginLeft" : "marginTop";
 
-    // clear any previous nudge first, so a tag that moved away from a collision doesn't
-    // leave a stale gap behind, and so the size measurement below reflects its natural spot
+    // clear any previous nudge first — both so a tag that moved away from a collision
+    // doesn't leave a stale gap, and so the measurement below reflects each tag's natural,
+    // un-nudged position
     tags.forEach((tag) => { tag.style[margin_prop] = ""; });
 
-    const overlay_rect = overlay.getBoundingClientRect();
-    const overlay_span = positionProp === "left" ? overlay_rect.width : overlay_rect.height;
     const gap = 6; // px of breathing room between adjacent tags
 
     const with_pos = tags
         .map((tag) => {
-            const rect = tag.getBoundingClientRect();
-            const half = (positionProp === "left" ? rect.width : rect.height) / 2;
-            return { tag, natural_px: (parseFloat(tag.style[positionProp]) / 100) * overlay_span, half };
+            // measured directly off the DOM rather than reconstructed from the tag's own
+            // left/top percentage — for a rotated longitude tag, its translateX(-50%) shift
+            // is based on its PRE-rotation width, which grows with the text ("Triangle" vs
+            // "Square"), so back-calculating from the percentage alone doesn't land on
+            // where it actually ends up on screen. .lon-tag-inner is the element the
+            // rotation is applied to, so it reports the true on-screen box; latitude tags
+            // have no such wrapper and measure correctly on the tag itself.
+            const visual = tag.querySelector(".lon-tag-inner") || tag;
+            const rect = visual.getBoundingClientRect();
+            const natural_start = positionProp === "left" ? rect.left : rect.top;
+            const size = positionProp === "left" ? rect.width : rect.height;
+            return { tag, natural_start, size };
         })
-        .sort((a, b) => a.natural_px - b.natural_px);
+        .sort((a, b) => a.natural_start - b.natural_start);
 
     let last_edge = -Infinity;
-    with_pos.forEach(({ tag, natural_px, half }) => {
-        const natural_start = natural_px - half;
+    with_pos.forEach(({ tag, natural_start, size }) => {
         const placed_start = Math.max(natural_start, last_edge);
         if (placed_start > natural_start) tag.style[margin_prop] = `${placed_start - natural_start}px`;
-        last_edge = placed_start + half * 2 + gap;
+        last_edge = placed_start + size + gap;
     });
 }
 
@@ -761,6 +778,9 @@ function wire_shape_row_controls(key) {
     if (!remove_btn || !lat_input || !lon_input) return;
 
     remove_btn.addEventListener("click", () => remove_shape(key));
+
+    lat_input.addEventListener("input", () => size_coord_input(lat_input));
+    lon_input.addEventListener("input", () => size_coord_input(lon_input));
 
     lat_input.addEventListener("change", () => {
         const parsed = parseFloat(lat_input.value);
@@ -867,6 +887,8 @@ function setup_footer_toggle() {
 
 // build and insert a new shape's floating lon tag (top edge) and lat+checkbox tag (right
 // edge) — both upright now, laid out the same way, just anchored to different edges
+// build and insert a new shape's floating lon tag (top edge, rotated like the original
+// single-shape label) and lat+checkbox tag (right edge, upright)
 function add_shape_rows(key, label) {
     const lon_overlay = document.querySelector(".lon-overlay");
     const lat_overlay = document.querySelector(".lat-overlay");
@@ -875,8 +897,10 @@ function add_shape_rows(key, label) {
     const lon_tag = document.createElement("div");
     lon_tag.className = "lon-tag";
     lon_tag.dataset.shape = key;
-    lon_tag.innerHTML = `<span class="shape-name">${label}</span>`
-        + `<input type="number" class="coord-input" data-axis="lon" step="0.1" autocomplete="off" />`;
+    lon_tag.innerHTML = `<div class="lon-tag-inner">`
+        + `<span class="shape-name">${label}</span>`
+        + `<input type="number" class="coord-input" data-axis="lon" step="0.1" autocomplete="off" />`
+        + `</div>`;
     lon_overlay.appendChild(lon_tag);
 
     const lat_tag = document.createElement("div");
@@ -919,12 +943,12 @@ function add_shape(key, label, geometry) {
 // including resetting that dropdown's own toggle/icon state via its close_current callback
 // (close_current_dropdown itself is declared up with the rest of the shared state).
 //
-// row_left/row_top is the exact spot the box should visually extend from — the outward
-// padding/border offset (PORTAL_BORDER_AND_PAD_X/TOP, declared with the rest of the shared
-// state) is so callers can just pass that row's own position without accounting for the
-// box's border and padding themselves. header_text, if given (continent/shape only), becomes
-// a bold, non-indented first row duplicating the toggle's own "↑ label" line — the toggle
-// itself is hidden while open so it isn't drawn twice.
+// row_left/row_top is the box's own final outer position (its border's top-left corner) —
+// each caller works out what that should be for its own case (see setup_custom_dropdown and
+// setup_country_search below), since a header-wrapping box and a plain below-the-row box
+// need different offsets from the thing they're anchored to. header_text, if given
+// (continent/shape only), becomes a bold, non-indented first row duplicating the toggle's
+// own "↑ label" line — the toggle itself is hidden while open so it isn't drawn twice.
 function open_dropdown_portal(row_left, row_top, options, on_pick, on_close, header_text) {
     const portal = document.getElementById("dropdown-portal");
     const page = document.getElementById("page");
@@ -933,8 +957,8 @@ function open_dropdown_portal(row_left, row_top, options, on_pick, on_close, hea
     if (close_current_dropdown) close_current_dropdown();
 
     const page_rect = page.getBoundingClientRect();
-    portal.style.left = `${row_left - page_rect.left - PORTAL_BORDER_AND_PAD_X}px`;
-    portal.style.top = `${row_top - page_rect.top - PORTAL_BORDER_AND_PAD_TOP}px`;
+    portal.style.left = `${row_left - page_rect.left}px`;
+    portal.style.top = `${row_top - page_rect.top}px`;
 
     portal.innerHTML = "";
 
@@ -991,8 +1015,8 @@ function setup_custom_dropdown(toggle_id, names, on_pick) {
         const header_text = toggle.textContent.replace(/\s+/g, " ").trim();
 
         close = open_dropdown_portal(
-            toggle_rect.left,
-            toggle_rect.top,
+            toggle_rect.left - PORTAL_BORDER_AND_PAD_X,
+            toggle_rect.top - PORTAL_BORDER_AND_PAD_TOP,
             names,
             on_pick,
             () => {
@@ -1063,15 +1087,26 @@ function setup_country_search() {
     if (!input) return;
     let close = null;
 
+    // sized to the value actually shown (or the placeholder, when empty) instead of a fixed
+    // rest/focus pair — that fixed pair meant the row's background stayed at its wide
+    // "focused" size even right after focusing with nothing typed yet
+    function size_input() {
+        const length = input.value.length || input.placeholder.length;
+        input.style.width = `${length + 1}ch`;
+    }
+    size_input();
+
     function pick(name) {
         const match = world_countries.find((f) => f.properties && f.properties.name === name);
         input.value = "";
+        size_input();
         if (close) close();
         if (!match) return;
         add_shape(slugify(match.properties.name), match.properties.name, ensure_winding(match));
     }
 
     function show_matches() {
+        size_input();
         const query = input.value.trim().toLowerCase();
 
         const all_names = world_countries
@@ -1092,9 +1127,13 @@ function setup_country_search() {
         const anchor = input.previousElementSibling || input; // the row's icon, for a consistent left edge
         const rect = anchor.getBoundingClientRect();
         const bottom = input.getBoundingClientRect().bottom;
-        close = open_dropdown_portal(rect.left, bottom, matches, pick, () => {
-            close = null;
-        });
+        close = open_dropdown_portal(
+            rect.left - PORTAL_BORDER_AND_PAD_X,
+            bottom + DROPDOWN_GAP_BELOW_ROW,
+            matches,
+            pick,
+            () => { close = null; }
+        );
     }
 
     input.addEventListener("focus", show_matches);
