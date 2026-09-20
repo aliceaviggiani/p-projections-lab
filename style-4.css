@@ -87,17 +87,12 @@ body {
     position: absolute;
     top: 0;
     transform: translateX(-50%);
+    background-color: #100060;
     white-space: nowrap;
     pointer-events: auto;
-}
-
-.lon-tag-inner {
     display: flex;
-    align-items: flex-start;
+    align-items: center;
     gap: 4px;
-    background-color: #100060;
-    transform: rotate(90deg);
-    transform-origin: top left;
 }
 
 .lat-overlay {
@@ -510,16 +505,21 @@ input[type="checkbox"]:checked {
    !important + the descendant selector are required here: .maps-grid sets its own explicit
    cursor (the crosshair image), and a child's own explicit cursor always beats a value
    merely inherited from an ancestor like #page — without overriding it directly, "can-grab"
-   was silently doing nothing everywhere the crosshair was set, which was the entire map area. */
+   was silently doing nothing everywhere the crosshair was set, which was the entire map area.
+   can-grab and is-dragging are kept mutually exclusive in JS (setup_shape_dragging removes
+   can-grab the moment a drag starts) rather than relying on these two blocks' relative
+   specificity to sort it out: #page.can-grab .maps-grid * has an extra class in it (two
+   classes vs. one), so it would otherwise outrank #page.is-dragging * — the hover cursor
+   winning over the dragging one for the entire time a shape was actually being dragged. */
 #page.can-grab,
 #page.can-grab .maps-grid,
 #page.can-grab .maps-grid * {
-    cursor: url('images/cursor-hand.png') 20 20, grab !important;
+    cursor: url('images/cursor-hand.png') 12 12, grab !important;
 }
 
 #page.is-dragging,
 #page.is-dragging * {
-    cursor: url('images/cursor-hand-grabbing.png') 20 20, grabbing !important;
+    cursor: url('images/cursor-hand-grabbing.png') 12 12, grabbing !important;
 }
 
 /* footer */

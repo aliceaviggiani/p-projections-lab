@@ -645,6 +645,7 @@ function setup_shape_dragging() {
         start_y = event.clientY;
 
         event.preventDefault(); // blocks native text selection even when the click landed on a menu label
+        surface.classList.remove("can-grab"); // mutually exclusive with is-dragging — see the CSS comment on .can-grab for why both being set at once was the bug
         surface.classList.add("is-dragging");
         window.addEventListener("pointermove", on_move);
         window.addEventListener("pointerup", on_up);
@@ -691,31 +692,42 @@ function refresh_shape_row(key) {
     deconflict_tags(".lat-overlay", ".lat-tag", "top");
 }
 
-// when two or more tags land close enough together to overlap, push the later ones down
-// until there's real clearance — works in actual measured pixels rather than crude percentage
-// rounding, which missed collisions whenever 1% of the strip was smaller than a line of text
+// when two or more tags land close enough together to overlap, push the later ones apart
+// along whichever axis they're actually laid out on — works in actual measured pixels rather
+// than crude percentage rounding, which missed collisions whenever 1% of the strip was
+// smaller than a tag. Each tag is centered on its natural position (translateX/Y(-50%)), so
+// half its own rendered size is how far it actually reaches from that center point; using
+// the real measured size (rather than a fixed guess) is what makes this work correctly for
+// longitude tags now that they're variable-width text like latitude's, not a fixed-width
+// rotated column.
 function deconflict_tags(overlaySelector, tagSelector, positionProp) {
     const overlay = document.querySelector(overlaySelector);
     if (!overlay) return;
     const tags = Array.from(overlay.querySelectorAll(tagSelector));
+    const margin_prop = positionProp === "left" ? "marginLeft" : "marginTop";
 
-    // clear any previous stacking first, so a tag that moved away from a collision
-    // doesn't leave a stale gap behind
-    tags.forEach((tag) => { tag.style.marginTop = ""; });
+    // clear any previous nudge first, so a tag that moved away from a collision doesn't
+    // leave a stale gap behind, and so the size measurement below reflects its natural spot
+    tags.forEach((tag) => { tag.style[margin_prop] = ""; });
 
     const overlay_rect = overlay.getBoundingClientRect();
     const overlay_span = positionProp === "left" ? overlay_rect.width : overlay_rect.height;
-    const min_gap = 20; // px — a bit more than one line of text
+    const gap = 6; // px of breathing room between adjacent tags
 
     const with_pos = tags
-        .map((tag) => ({ tag, natural_px: (parseFloat(tag.style[positionProp]) / 100) * overlay_span }))
+        .map((tag) => {
+            const rect = tag.getBoundingClientRect();
+            const half = (positionProp === "left" ? rect.width : rect.height) / 2;
+            return { tag, natural_px: (parseFloat(tag.style[positionProp]) / 100) * overlay_span, half };
+        })
         .sort((a, b) => a.natural_px - b.natural_px);
 
-    let last_bottom = -Infinity;
-    with_pos.forEach(({ tag, natural_px }) => {
-        const placed_px = Math.max(natural_px, last_bottom);
-        if (placed_px > natural_px) tag.style.marginTop = `${placed_px - natural_px}px`;
-        last_bottom = placed_px + min_gap;
+    let last_edge = -Infinity;
+    with_pos.forEach(({ tag, natural_px, half }) => {
+        const natural_start = natural_px - half;
+        const placed_start = Math.max(natural_start, last_edge);
+        if (placed_start > natural_start) tag.style[margin_prop] = `${placed_start - natural_start}px`;
+        last_edge = placed_start + half * 2 + gap;
     });
 }
 
@@ -853,8 +865,8 @@ function setup_footer_toggle() {
 }
 
 
-// build and insert a new shape's floating lon tag (top edge, rotated like the original
-// single-shape label) and lat+checkbox tag (right edge, upright)
+// build and insert a new shape's floating lon tag (top edge) and lat+checkbox tag (right
+// edge) — both upright now, laid out the same way, just anchored to different edges
 function add_shape_rows(key, label) {
     const lon_overlay = document.querySelector(".lon-overlay");
     const lat_overlay = document.querySelector(".lat-overlay");
@@ -863,10 +875,8 @@ function add_shape_rows(key, label) {
     const lon_tag = document.createElement("div");
     lon_tag.className = "lon-tag";
     lon_tag.dataset.shape = key;
-    lon_tag.innerHTML = `<div class="lon-tag-inner">`
-        + `<span class="shape-name">${label}</span>`
-        + `<input type="number" class="coord-input" data-axis="lon" step="0.1" autocomplete="off" />`
-        + `</div>`;
+    lon_tag.innerHTML = `<span class="shape-name">${label}</span>`
+        + `<input type="number" class="coord-input" data-axis="lon" step="0.1" autocomplete="off" />`;
     lon_overlay.appendChild(lon_tag);
 
     const lat_tag = document.createElement("div");
